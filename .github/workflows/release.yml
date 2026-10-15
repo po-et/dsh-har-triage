@@ -1,0 +1,47 @@
+name: Release
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing version tag to publish
+        required: true
+        default: v0.1.0
+permissions:
+  contents: read
+concurrency:
+  group: har-triage-release
+  cancel-in-progress: false
+jobs:
+  release:
+    if: github.repository == 'po-et/dsh-har-triage'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Check version
+        run: test "$RELEASE_TAG" = "v$(node -p 'JSON.parse(require("fs").readFileSync("package.json", "utf8")).version')"
+      - run: npm ci --ignore-scripts
+      - run: npm test
+      - run: npm run smoke:host
+      - name: Pack bundle
+        run: |
+          mkdir release-artifacts
+          npm pack --pack-destination release-artifacts
+          cd release-artifacts
+          sha256sum dsh-har-triage-*.tgz > SHA256SUMS
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$RELEASE_TAG" release-artifacts/dsh-har-triage-*.tgz release-artifacts/SHA256SUMS --repo "$GITHUB_REPOSITORY" --verify-tag --title "HAR Triage $RELEASE_TAG" --notes 'Offline, read-only HAR 1.2 diagnostics for DeepSeek Harness. Creates a self-contained report and bounded agent evidence using endpoint aliases and original HAR entry indexes. URLs, headers, cookies, bodies and absolute timestamps are omitted. No recording or replay. See the README for installation, limits and privacy caveats.'
