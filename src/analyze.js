@@ -38,9 +38,9 @@ function add(a, b) { return numeric(a + b) }
 
 function timestamp(value) {
   if (typeof value !== 'string') fail()
-  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,9})?(Z|[+-]\d{2}:\d{2})$/.exec(value)
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,9}))?(Z|[+-]\d{2}:\d{2})$/.exec(value)
   if (!match) fail()
-  const [, year, month, day, hour, minute, second, zone] = match
+  const [, year, month, day, hour, minute, second, fraction = '', zone] = match
   const y = Number(year), m = Number(month), d = Number(day)
   const leap = y % 4 === 0 && (y % 100 !== 0 || y % 400 === 0)
   const days = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
@@ -49,7 +49,9 @@ function timestamp(value) {
       (zone !== 'Z' && (Number(zone.slice(1, 3)) > 23 || Number(zone.slice(4)) > 59))) fail()
   const result = Date.parse(value)
   if (!Number.isFinite(result)) fail()
-  return result
+  // Date.parse keeps only whole milliseconds. Subtract nanosecond timestamps
+  // before converting to a Number so nearby requests retain their ordering.
+  return BigInt(result) * 1_000_000n + BigInt(fraction.padEnd(9, '0').slice(3))
 }
 
 function method(value) {
@@ -138,13 +140,13 @@ export function analyzeHar(input, options = {}) {
   if (!record(har) || !record(har.log) || har.log.version !== '1.2' || !Array.isArray(har.log.entries)) fail()
   if (har.log.entries.length > MAX_ENTRIES) fail('too-many-entries')
   const projected = []
-  let earliest = Infinity
+  let earliest
   for (let index = 0; index < har.log.entries.length; index++) {
     checkCancelled(signal)
     const result = projectEntry(har.log.entries[index], index, slowMs)
     if (!result) continue
     projected.push(result)
-    earliest = Math.min(earliest, result.started)
+    if (earliest === undefined || result.started < earliest) earliest = result.started
   }
   const summary = {
     totalEntries: har.log.entries.length, analyzedEntries: projected.length,
@@ -164,7 +166,8 @@ export function analyzeHar(input, options = {}) {
       endpoints.push(endpoint)
     }
     entry.endpointId = endpoint.id
-    entry.startOffsetMs = started - earliest
+    const elapsedNs = started - earliest
+    entry.startOffsetMs = Number(elapsedNs / 1_000_000n) + Number(elapsedNs % 1_000_000n) / 1_000_000
     endpoint.requestCount++
     if (entry.status === 0 || entry.status >= 400) endpoint.errorCount++
     if (entry.findings.includes('slow')) { endpoint.slowCount++; summary.slowRequests++ }

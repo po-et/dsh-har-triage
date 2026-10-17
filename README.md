@@ -60,6 +60,8 @@ This creates a new directory under `artifacts/` with a deliberately synthetic ca
 
 `503` means the capture records a server-error response. `status: 0` means it did not record a valid HTTP response. Neither identifies a failing service, proves CORS, or proves an expired token. A high wait/TTFB share is an observation, not proof that the backend or database is slow.
 
+Start offsets include submillisecond differences and are expressed in relative milliseconds. Absolute source timestamps are never included in the report.
+
 Unknown phase timings and byte sizes remain `-1`, displayed as “Unknown.” TLS is part of the HAR connection timing and is not added a second time. Contradictory phase durations are flagged; the report hides misleading proportions.
 
 ## What is retained and removed

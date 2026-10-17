@@ -175,6 +175,41 @@ test('validates absolute source timestamps and emits only relative milliseconds'
   assert.equal(JSON.stringify(report).includes('2024'), false)
 })
 
+test('preserves fractional start offsets and duration across milliseconds and time zones', () => {
+  const report = analyzeHar(bytes(capture([
+    entry({ startedDateTime: '2026-10-17T08:00:00.001125+08:00', time: 0.25, timings: {} }),
+    entry({ startedDateTime: '2026-10-17T00:00:00.000875Z', time: 0.125, timings: {} }),
+    entry({ startedDateTime: '2026-10-17T00:00:00.000875001Z', time: 0, timings: {} })
+  ])))
+  assert.deepEqual(report.entries.map(item => item.startOffsetMs), [0.25, 0, 0.000001])
+  assert.equal(report.summary.durationMs, 0.5)
+  assert.doesNotThrow(() => JSON.stringify(report))
+  assert.equal(JSON.stringify(report).includes('2026-10-17'), false)
+})
+
+test('fractional offsets remain relative before the epoch and at distant dates', () => {
+  for (const [earlier, later] of [
+    ['1969-12-31T23:59:59.999875Z', '1970-01-01T00:00:00.000125Z'],
+    ['9999-12-31T23:59:59.999875Z', '9999-12-31T23:59:59.999999Z']
+  ]) {
+    const report = analyzeHar(bytes(capture([
+      entry({ startedDateTime: later, time: 0, timings: {} }),
+      entry({ startedDateTime: earlier, time: 0, timings: {} })
+    ])))
+    assert.deepEqual(report.entries.map(item => item.startOffsetMs),
+      [earlier.startsWith('1969') ? 0.25 : 0.124, 0])
+  }
+})
+
+test('keeps exactly representable whole-millisecond offsets across large spans', () => {
+  const report = analyzeHar(bytes(capture([
+    entry({ startedDateTime: '0000-01-01T00:00:00Z', time: 0, timings: {} }),
+    entry({ startedDateTime: '4677-01-01T00:00:00.001Z', time: 0, timings: {} })
+  ])))
+  assert.equal(report.entries[1].startOffsetMs, 147591936000001)
+  assert.equal(report.summary.durationMs, 147591936000001)
+})
+
 test('enforces byte and entry bounds before analysis, without truncation', () => {
   rejects(Buffer.alloc(MAX_INPUT_BYTES + 1), 'input-too-large')
   const exact = Buffer.alloc(MAX_INPUT_BYTES, ' ')
