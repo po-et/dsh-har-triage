@@ -41,6 +41,39 @@ test('real tool dispatch publishes canonical reports, preserves source, refuses 
   } finally { await ctx.fiber.dispose(); }
 });
 
+test('tool evidence and reports preserve method identity without exposing private tokens', async () => {
+  const { workspace } = await fixture();
+  const methods = ['PRIVATE-METHOD-CANARY', 'private-method-canary', 'GET', 'get'];
+  const capture = JSON.parse(syntheticHar(methods.length));
+  for (const [index, item] of capture.log.entries.entries()) item.request.method = methods[index];
+  const source = JSON.stringify(capture);
+  await writeFile(join(workspace, 'capture.har'), source);
+  const { ctx } = await createHost(workspace);
+  try {
+    const result = await dispatch(ctx, 'har_triage', args);
+    assert.equal(result.isError, false, errorText(result));
+    assert.equal(result.value.summary.endpoints, 4);
+    const data = await readFile(result.value.paths.json, 'utf8');
+    const html = await readFile(result.value.paths.html, 'utf8');
+    const report = JSON.parse(data);
+    assert.equal(report.reportId, result.value.reportId);
+    for (const entries of [result.value.evidence, report.entries]) {
+      assert.deepEqual(entries.map(item => item.sourceEntryIndex), [0, 1, 2, 3]);
+      assert.deepEqual(entries.map(item => item.endpointId),
+        ['endpoint-001', 'endpoint-002', 'endpoint-003', 'endpoint-004']);
+      assert.deepEqual(entries.map(item => item.method), ['OTHER', 'OTHER', 'GET', 'OTHER']);
+    }
+    assert.deepEqual(report.endpoints.map(item => [item.requestCount, item.errorCount]),
+      [[1, 1], [1, 1], [1, 1], [1, 1]]);
+    for (const output of [data, html, JSON.stringify(result)]) {
+      for (const canary of ['PRIVATE-METHOD-CANARY', 'private-method-canary', 'HAR_SECRET_CANARY']) {
+        assert.ok(!output.includes(canary));
+      }
+    }
+    assert.equal(await readFile(join(workspace, 'capture.har'), 'utf8'), source);
+  } finally { await ctx.fiber.dispose(); }
+});
+
 test('read-only policy denies publication before any artifacts are created', async () => {
   const { workspace } = await fixture();
   const { ctx } = await createHost(workspace, { mode: 'read-only' });

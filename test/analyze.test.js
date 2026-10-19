@@ -39,7 +39,7 @@ test('projects HAR diagnostics and computes relative offsets from the earliest s
 test('endpoint aliases ignore query, fragment and credentials, but distinguish origin, path and method', () => {
   const urls = ['https://user:password@example.test/items?token=secret#private', 'https://example.test/items?q=other',
     'https://example.test/other', 'https://other.test/items']
-  const entries = urls.map(url => entry({ request: { method: 'get', url } }))
+  const entries = urls.map(url => entry({ request: { method: 'GET', url } }))
   entries.push(entry({ request: { method: 'POST', url: urls[0] } }))
   const report = analyzeHar(bytes(capture(entries)))
   assert.deepEqual(report.entries.map(item => item.endpointId), ['endpoint-001', 'endpoint-001', 'endpoint-002', 'endpoint-003', 'endpoint-004'])
@@ -48,6 +48,46 @@ test('endpoint aliases ignore query, fragment and credentials, but distinguish o
     entry({ request: { method, url: urls[0] } })))))
   assert.equal(extensions.endpoints.length, 2)
   assert.deepEqual(extensions.entries.map(item => item.method), ['OTHER', 'OTHER'])
+})
+
+test('case-sensitive method identities keep endpoint errors and timings separate', () => {
+  const methods = ['PURGE', 'purge', 'PURGE', 'GET', 'get']
+  const times = [100, 3000, 200, 500, 4000]
+  const entries = methods.map((method, index) => entry({
+    request: { method, url: `https://example.test/items?q=${index}` },
+    response: { status: index === 1 || index === 4 ? 501 : 200, content: {} },
+    time: times[index], timings: {}
+  }))
+  const report = analyzeHar(bytes(capture(entries)))
+  assert.equal(report.summary.endpoints, 4)
+  assert.deepEqual(report.entries.map(item => item.endpointId),
+    ['endpoint-001', 'endpoint-002', 'endpoint-001', 'endpoint-003', 'endpoint-004'])
+  assert.deepEqual(report.entries.map(item => item.method), ['OTHER', 'OTHER', 'OTHER', 'GET', 'OTHER'])
+  assert.deepEqual(report.endpoints, [
+    { id: 'endpoint-001', method: 'OTHER', requestCount: 2, errorCount: 0, slowCount: 0, totalMs: 300, maxMs: 200 },
+    { id: 'endpoint-002', method: 'OTHER', requestCount: 1, errorCount: 1, slowCount: 1, totalMs: 3000, maxMs: 3000 },
+    { id: 'endpoint-003', method: 'GET', requestCount: 1, errorCount: 0, slowCount: 0, totalMs: 500, maxMs: 500 },
+    { id: 'endpoint-004', method: 'OTHER', requestCount: 1, errorCount: 1, slowCount: 1, totalMs: 4000, maxMs: 4000 }
+  ])
+  assert.ok(!JSON.stringify(report).includes('PURGE'))
+  assert.ok(!JSON.stringify(report).includes('purge'))
+  const renamed = structuredClone(entries)
+  for (const item of renamed) {
+    if (item.request.method === 'PURGE') item.request.method = 'PRIVATE-METHOD-CANARY'
+    if (item.request.method === 'purge') item.request.method = 'private-method-canary'
+  }
+  assert.deepEqual(analyzeHar(bytes(capture(renamed))), report,
+    'report identity depends on the retained grouping, not private method tokens')
+})
+
+test('only exact standard method tokens receive their controlled display names', () => {
+  const methods = ['GET', 'HEAD', 'POST', 'PUT', 'DELETE', 'CONNECT', 'OPTIONS', 'TRACE', 'PATCH']
+  const variants = methods.flatMap(method => [method, method.toLowerCase()])
+  const report = analyzeHar(bytes(capture(variants.map(method => entry({
+    request: { method, url: 'https://example.test/items' }
+  })))))
+  assert.equal(report.endpoints.length, variants.length)
+  assert.deepEqual(report.entries.map(item => item.method), methods.flatMap(method => [method, 'OTHER']))
 })
 
 test('never emits source strings, even in ignored nested, extension, prototype or MIME fields', () => {

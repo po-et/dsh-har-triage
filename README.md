@@ -68,6 +68,8 @@ Unknown phase timings and byte sizes remain `-1`, displayed as “Unknown.” TL
 
 Retained: source entry index, sequential endpoint alias, controlled method/status/content classes, relative offsets, numeric durations/sizes, and fixed diagnostic codes. Aliases group the same method/origin/path within one capture; query strings and fragments do not affect grouping.
 
+HTTP method identity is case-sensitive: `GET` and `get` receive separate aliases. Only the allowlisted uppercase methods receive named display values; all other method tokens appear as `OTHER`. Private method tokens are used only for grouping and are not included in reports, tool evidence or report ID hashes.
+
 Removed: complete URLs including origins and paths, query values, headers, cookies, request/response bodies, page titles, initiator data, IP addresses, absolute timestamps, extension fields, raw error text, and the original file digest. The report ID hashes only the retained projection. Arbitrary source strings are not copied to reports or tool evidence.
 
 This is a minimal diagnostic projection, **not** a scrubbed HAR, an anonymization guarantee, or a replacement for reviewing an artifact before sharing it. Status patterns, sizes, timing, request counts and grouping can still identify an application. See [SECURITY.md](SECURITY.md).

@@ -57,8 +57,7 @@ function timestamp(value) {
 function method(value) {
   if (typeof value !== 'string' || value.length === 0 || value.length > 64 ||
       !/^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/.test(value)) fail()
-  const normalized = value.toUpperCase()
-  return METHODS.has(normalized) ? normalized : 'OTHER'
+  return METHODS.has(value) ? value : 'OTHER'
 }
 
 function mimeClass(value) {
@@ -112,7 +111,7 @@ function projectEntry(source, sourceEntryIndex, slowMs) {
       (timings.connect >= 0 && timings.ssl > timings.connect + 1)) findings.push('timing-mismatch')
   return {
     started,
-    endpointKey: JSON.stringify([source.request.method.toUpperCase(), url.origin, url.pathname]),
+    endpointKey: JSON.stringify([source.request.method, url.origin, url.pathname]),
     entry: {
       sourceEntryIndex, endpointId: '', method: verb, status, startOffsetMs: 0, totalMs,
       timings, sizes, mimeClass: mimeClass(source.response.content.mimeType), findings
