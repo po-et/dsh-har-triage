@@ -99,6 +99,23 @@ test('real CLI writes anonymous JSON and standalone HTML without changing source
   }
 });
 
+test('real CLI preserves the JSON content class of an Ollama NDJSON capture in both reports', async () => {
+  const har = capture();
+  har.log.entries[0].response.content.mimeType = 'application/x-ndjson; charset=utf-8';
+  har.log.entries[0].response.content.text = `{"response":"${canary}","done":false}\n{"done":true}\n`;
+  const paths = await temporaryCapture(JSON.stringify(har));
+  const original = await readFile(paths.input);
+  const result = run([paths.input, '--out', paths.out]);
+  assert.equal(result.status, 0, result.stderr);
+  const json = await readFile(join(paths.out, 'report.json'), 'utf8');
+  const html = await readFile(join(paths.out, 'report.html'), 'utf8');
+  const embedded = JSON.parse(html.match(/<script id="report-data" type="application\/json">([\s\S]*?)<\/script>/)[1]);
+  assert.equal(JSON.parse(json).entries[0].mimeClass, 'json');
+  assert.equal(embedded.entries[0].mimeClass, 'json');
+  for (const output of [result.stdout, result.stderr, json, html]) assert.ok(!output.includes(canary));
+  assert.deepEqual(await readFile(paths.input), original);
+});
+
 test('real CLI refuses an existing output directory and preserves its files', async () => {
   const paths = await temporaryCapture();
   await mkdir(paths.out);

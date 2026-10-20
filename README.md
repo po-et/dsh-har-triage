@@ -64,6 +64,8 @@ Start offsets include submillisecond differences and are expressed in relative m
 
 Unknown phase timings and byte sizes remain `-1`, displayed as “Unknown.” TLS is part of the HAR connection timing and is not added a second time. Contradictory phase durations are flagged; the report hides misleading proportions.
 
+Ollama's [`application/x-ndjson` streaming responses](https://docs.ollama.com/api/streaming) are classified as JSON. This is a MIME-based content category, not validation of the response body; model output remains excluded from reports.
+
 ## What is retained and removed
 
 Retained: source entry index, sequential endpoint alias, controlled method/status/content classes, relative offsets, numeric durations/sizes, and fixed diagnostic codes. Aliases group the same method/origin/path within one capture; query strings and fragments do not affect grouping.

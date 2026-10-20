@@ -167,6 +167,24 @@ test('uses controlled MIME and method classes, never arbitrary strings', () => {
   rejects(bytes(capture([entry({ request: { method: 'GET\r\nSECRET', url: 'https://a.test' } })])))
 })
 
+test('classifies Ollama NDJSON streams as JSON without retaining content or MIME parameters', () => {
+  const secret = 'PRIVATE_STREAM_CONTENT_2af079';
+  for (const mimeType of ['application/x-ndjson', `Application/X-NdJson; charset=utf-8; private=${secret}`]) {
+    const source = entry({ response: { status: 200, content: {
+      size: 150, mimeType, text: `{"response":"${secret}","done":false}\n{"done":true}\n`
+    } } });
+    const report = analyzeHar(bytes(capture([source])));
+    assert.equal(report.entries[0].mimeClass, 'json');
+    assert.ok(!JSON.stringify(report).includes(secret));
+    source.response.content.text = 'different private model output';
+    assert.equal(analyzeHar(bytes(capture([source]))).reportId, report.reportId);
+  }
+  for (const [mimeType, expected] of [['application/x-ndjson-private', 'binary'], ['text/event-stream', 'text']]) {
+    const source = entry({ response: { status: 200, content: { mimeType } } });
+    assert.equal(analyzeHar(bytes(capture([source]))).entries[0].mimeClass, expected);
+  }
+});
+
 test('rejects malformed HAR and JSON with constant, non-reflective errors', () => {
   const invalid = [null, [], {}, { log: null }, { log: { version: '1.1', entries: [] } },
     { log: { version: '1.2', entries: {} } }, capture([null]), capture([entry({ request: {} })]),

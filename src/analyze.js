@@ -64,7 +64,7 @@ function mimeClass(value) {
   if (value === undefined || value === '') return 'unknown'
   if (typeof value !== 'string') fail()
   const type = value.split(';', 1)[0].trim().toLowerCase()
-  if (/^(?:application|text)\/(?:[a-z0-9!#$&^_.+-]+\+)?json$/.test(type)) return 'json'
+  if (type === 'application/x-ndjson' || /^(?:application|text)\/(?:[a-z0-9!#$&^_.+-]+\+)?json$/.test(type)) return 'json'
   if (type === 'text/html' || type === 'application/xhtml+xml') return 'html'
   if (type === 'text/css') return 'css'
   if (['application/javascript', 'text/javascript', 'application/ecmascript', 'text/ecmascript'].includes(type)) return 'javascript'
