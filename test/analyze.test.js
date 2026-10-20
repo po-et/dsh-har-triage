@@ -147,6 +147,31 @@ test('does not double-count TLS in connect or assign a network failure to CORS',
   assert.deepEqual(analyzeHar(bytes(capture([mismatch]))).entries[0].findings, ['timing-mismatch'])
 })
 
+test('flags TLS longer than the whole request even when connection timing is unknown', () => {
+  for (const connect of [undefined, -1]) {
+    const source = entry({ timings: { connect, ssl: 250, send: 0, wait: 50, receive: 50 } })
+    const report = analyzeHar(bytes(capture([source])))
+    assert.deepEqual(report.entries[0].findings, ['timing-mismatch'])
+    assert.equal(report.entries[0].timings.connect, -1)
+    assert.equal(report.entries[0].timings.ssl, 250)
+    assert.equal(report.entries[0].totalMs, 100)
+  }
+})
+
+test('TLS total validation preserves rounding tolerance and does not add TLS twice', () => {
+  for (const [time, ssl, mismatch] of [
+    [100, -1, false], [100, 90, false], [100, 101, false], [100, 101.01, true],
+    [1000, 1010, false], [1000, 1010.01, true], [0, 2, true]
+  ]) {
+    const report = analyzeHar(bytes(capture([entry({
+      time, timings: { ssl, send: 0, wait: time / 2, receive: time / 2 }
+    })])))
+    assert.equal(report.entries[0].findings.includes('timing-mismatch'), mismatch, `${time}/${ssl}`)
+  }
+  const source = entry({ timings: { connect: 80, ssl: 70, send: 0, wait: 10, receive: 10 } })
+  assert.deepEqual(analyzeHar(bytes(capture([source]))).entries[0].findings, [])
+})
+
 test('slow threshold is inclusive and wait-dominant is an observation only on slow requests', () => {
   const source = entry({ time: 200, timings: { wait: 100 } })
   assert.deepEqual(analyzeHar(bytes(capture([source])), { slowMs: 200 }).entries[0].findings, ['slow', 'wait-dominant'])

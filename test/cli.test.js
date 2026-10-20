@@ -116,6 +116,29 @@ test('real CLI preserves the JSON content class of an Ollama NDJSON capture in b
   assert.deepEqual(await readFile(paths.input), original);
 });
 
+test('real CLI carries contradictory TLS evidence into JSON and HTML without changing source bytes', async () => {
+  const har = capture();
+  har.log.entries = [har.log.entries[0]];
+  har.log.entries[0].time = 100;
+  har.log.entries[0].response.status = 200;
+  har.log.entries[0].timings = { connect: -1, ssl: 250, send: 0, wait: 50, receive: 50 };
+  const paths = await temporaryCapture(JSON.stringify(har));
+  const original = await readFile(paths.input);
+  const result = run([paths.input, '--out', paths.out]);
+  assert.equal(result.status, 0, result.stderr);
+  const json = await readFile(join(paths.out, 'report.json'), 'utf8');
+  const html = await readFile(join(paths.out, 'report.html'), 'utf8');
+  const report = JSON.parse(json);
+  const embedded = JSON.parse(html.match(/<script id="report-data" type="application\/json">([\s\S]*?)<\/script>/)[1]);
+  for (const projection of [report, embedded]) {
+    assert.deepEqual(projection.entries[0].findings, ['timing-mismatch']);
+    assert.equal(projection.entries[0].timings.connect, -1);
+    assert.equal(projection.entries[0].timings.ssl, 250);
+  }
+  for (const output of [result.stdout, result.stderr, json, html]) assert.ok(!output.includes(canary));
+  assert.deepEqual(await readFile(paths.input), original);
+});
+
 test('real CLI refuses an existing output directory and preserves its files', async () => {
   const paths = await temporaryCapture();
   await mkdir(paths.out);

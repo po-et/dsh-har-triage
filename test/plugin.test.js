@@ -74,6 +74,30 @@ test('tool evidence and reports preserve method identity without exposing privat
   } finally { await ctx.fiber.dispose(); }
 });
 
+test('tool evidence includes a TLS contradiction even without an HTTP error or slow request', async () => {
+  const { workspace } = await fixture();
+  const capture = JSON.parse(syntheticHar());
+  const entry = capture.log.entries[0];
+  entry.time = 100;
+  entry.response.status = 200;
+  entry.timings = { connect: -1, ssl: 250, send: 0, wait: 50, receive: 50 };
+  const source = JSON.stringify(capture);
+  await writeFile(join(workspace, 'capture.har'), source);
+  const { ctx } = await createHost(workspace);
+  try {
+    const result = await dispatch(ctx, 'har_triage', args);
+    assert.equal(result.isError, false, errorText(result));
+    assert.equal(result.value.evidence.length, 1);
+    assert.deepEqual(result.value.evidence[0].findings, ['timing-mismatch']);
+    assert.equal(result.value.summary.requests5xx, 0);
+    assert.equal(result.value.summary.slowRequests, 0);
+    const data = await readFile(result.value.paths.json, 'utf8');
+    const html = await readFile(result.value.paths.html, 'utf8');
+    for (const output of [data, html, JSON.stringify(result)]) assert.ok(!output.includes('HAR_SECRET_CANARY'));
+    assert.equal(await readFile(join(workspace, 'capture.har'), 'utf8'), source);
+  } finally { await ctx.fiber.dispose(); }
+});
+
 test('read-only policy denies publication before any artifacts are created', async () => {
   const { workspace } = await fixture();
   const { ctx } = await createHost(workspace, { mode: 'read-only' });

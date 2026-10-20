@@ -107,7 +107,8 @@ function projectEntry(source, sourceEntryIndex, slowMs) {
   // HAR connect already includes TLS. Adding ssl here would double-count it.
   const knownTotal = PHASES.filter(phase => phase !== 'ssl')
     .reduce((sum, phase) => add(sum, Math.max(0, timings[phase])), 0)
-  if (knownTotal > totalMs + Math.max(1, totalMs * 0.01) ||
+  const totalLimit = totalMs + Math.max(1, totalMs * 0.01)
+  if (knownTotal > totalLimit || timings.ssl > totalLimit ||
       (timings.connect >= 0 && timings.ssl > timings.connect + 1)) findings.push('timing-mismatch')
   return {
     started,
