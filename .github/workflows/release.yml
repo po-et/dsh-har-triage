@@ -7,7 +7,7 @@ on:
       tag:
         description: Existing version tag to publish
         required: true
-        default: v0.1.0
+        default: v0.1.1
 permissions:
   contents: read
 concurrency:
@@ -34,6 +34,13 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: npm test
       - run: npm run smoke:host
+      - run: npm install --global pnpm@11.7.0 --ignore-scripts --no-audit --no-fund
+      - name: Verify packed bundle in real profiles
+        run: |
+          for version in 0.2.1-rc.2 0.2.1-rc.3; do
+            npm install --prefix "$RUNNER_TEMP/harness-$version" --ignore-scripts --no-audit --no-fund "@deepseek-ai/dsh@$version"
+            npm run smoke:profile -- "$RUNNER_TEMP/harness-$version/node_modules/@deepseek-ai/dsh"
+          done
       - name: Pack bundle
         run: |
           mkdir release-artifacts
@@ -44,4 +51,4 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$RELEASE_TAG" release-artifacts/dsh-har-triage-*.tgz release-artifacts/SHA256SUMS --repo "$GITHUB_REPOSITORY" --verify-tag --title "HAR Triage $RELEASE_TAG" --notes 'Offline, read-only HAR 1.2 diagnostics for DeepSeek Harness. Creates a self-contained report and bounded agent evidence using endpoint aliases and original HAR entry indexes. URLs, headers, cookies, bodies and absolute timestamps are omitted. No recording or replay. See the README for installation, limits and privacy caveats.'
+          gh release create "$RELEASE_TAG" release-artifacts/dsh-har-triage-*.tgz release-artifacts/SHA256SUMS --repo "$GITHUB_REPOSITORY" --verify-tag --title "HAR Triage $RELEASE_TAG" --notes 'Fixes compatibility with Harness 0.2.1-rc.2 and 0.2.1-rc.3. The packed bundle is installed through the real CLI into fresh temporary profiles and exercised through har_triage before publication. Node 24.9+ is required. This release also includes the existing fixes for method case, submillisecond offsets, NDJSON classification and contradictory TLS durations. See the README for installation, limits and synthetic acceptance checks.'

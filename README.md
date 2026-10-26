@@ -19,14 +19,16 @@ Request #43 corresponds to `log.entries[42]` in your original HAR. Endpoint alia
 
 ## Install in Harness
 
-Node 22.19+ is required. Install the prebuilt bundle into your chosen profile:
+Node 24.9+ is required. Install the prebuilt bundle into your chosen profile:
 
 ```sh
-dsh plugin --profile YOUR_PROFILE add https://github.com/po-et/dsh-har-triage/releases/download/v0.1.0/dsh-har-triage-0.1.0.tgz
+dsh plugin --profile YOUR_PROFILE add https://github.com/po-et/dsh-har-triage/releases/download/v0.1.1/dsh-har-triage-0.1.1.tgz
 dsh --profile YOUR_PROFILE --dump-config
 ```
 
-The configuration should contain the `har-triage` row. Start that profile, put your HAR inside its session workspace, and ask:
+Version 0.1.1 adds compatibility with Harness `0.2.1-rc.2` (npm `latest`) and `0.2.1-rc.3` (npm `next`), verified on October 26, 2026. Older `0.2.0-rc.2` and `0.2.1-alpha.2` peers remain accepted based on the original release's tests; they are not part of the current CI matrix.
+
+The configuration should contain the `har-triage` row. A configuration dump alone does not establish runtime compatibility. Start that profile, put your HAR inside its session workspace, and ask:
 
 > Inspect capture.har with har_triage. Save reports in a new har-review directory. Explain the measured evidence and cite the original HAR entry indexes. Do not guess root causes.
 
@@ -90,12 +92,13 @@ This is a minimal diagnostic projection, **not** a scrubbed HAR, an anonymizatio
 npm ci --ignore-scripts
 npm test
 npm run smoke:host
+npm run smoke:profile -- /absolute/path/to/node_modules/@deepseek-ai/dsh
 npm pack --dry-run
 ```
 
-48 tests passed on Node 24 and 26. They cover actual CLI subprocesses, controlled output and failure text, input limits, phases, original-file preservation, and real Cordis tool dispatch/filesystem/sandbox/Loader integration. `smoke:host` is a real service composition, not a CLI profile boot or a live-LLM test.
+The 60 tests cover actual CLI subprocesses, controlled output and failure text, input limits, phases, original-file preservation, and real Cordis tool dispatch/filesystem/sandbox/Loader integration. CI runs them on Node 24 and 26. `smoke:host` uses a real service composition; `smoke:profile` requires pnpm on PATH, packs this checkout, installs its tarball with the specified Harness CLI into a fresh temporary Profile, boots it with `runProfile`, and dispatches `har_triage`. Test files and Profiles are retained under the OS temporary directory for inspection.
 
-The packed bundle was separately installed through the actual CLI into fresh temporary Profiles on Harness `0.2.0-rc.2` and `0.2.1-alpha.2`, then booted with `runProfile` and exercised through `har_triage`. Source bytes were unchanged; output omitted the synthetic canary; overwrite and workspace-escape attempts were refused. HMR was disabled only in those temporary Profiles. The alpha host emitted three unrelated Typert activation warnings; rc.2 did not. No LLM or real credentials were used.
+The current packed bundle was installed and exercised on Harness `0.2.1-rc.2` and `0.2.1-rc.3`. Source bytes were unchanged; output omitted the synthetic canary; overwrite and workspace-escape attempts were refused. HMR is disabled only in the temporary Profiles. CI and the release workflow repeat these checks on both versions. No LLM or real credentials are used. These synthetic checks establish the tested runtime behavior; they are not evidence of real-user usefulness.
 
 Browser checks covered status filtering, signal-to-request navigation, correct source locators, no console errors, and a 390-pixel layout without page-level overflow. The demo and regression captures are synthetic; real-user usefulness is not yet validated.
 
