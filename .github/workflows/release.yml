@@ -7,7 +7,7 @@ on:
       tag:
         description: Existing version tag to publish
         required: true
-        default: v0.1.1
+        default: v0.1.2
 permissions:
   contents: read
 concurrency:
@@ -37,7 +37,7 @@ jobs:
       - run: npm install --global pnpm@11.7.0 --ignore-scripts --no-audit --no-fund
       - name: Verify packed bundle in real profiles
         run: |
-          for version in 0.2.1-rc.2 0.2.1-rc.3; do
+          for version in 0.2.1-rc.2 0.2.1-rc.3 0.2.1-rc.4 0.2.2-alpha.2; do
             npm install --prefix "$RUNNER_TEMP/harness-$version" --ignore-scripts --no-audit --no-fund "@deepseek-ai/dsh@$version"
             npm run smoke:profile -- "$RUNNER_TEMP/harness-$version/node_modules/@deepseek-ai/dsh"
           done
@@ -51,4 +51,4 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$RELEASE_TAG" release-artifacts/dsh-har-triage-*.tgz release-artifacts/SHA256SUMS --repo "$GITHUB_REPOSITORY" --verify-tag --title "HAR Triage $RELEASE_TAG" --notes 'Fixes compatibility with Harness 0.2.1-rc.2 and 0.2.1-rc.3. The packed bundle is installed through the real CLI into fresh temporary profiles and exercised through har_triage before publication. Node 24.9+ is required. This release also includes the existing fixes for method case, submillisecond offsets, NDJSON classification and contradictory TLS durations. See the README for installation, limits and synthetic acceptance checks.'
+          gh release create "$RELEASE_TAG" release-artifacts/dsh-har-triage-*.tgz release-artifacts/SHA256SUMS --repo "$GITHUB_REPOSITORY" --verify-tag --title "HAR Triage $RELEASE_TAG" --notes-file CHANGELOG.md

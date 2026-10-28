@@ -1,6 +1,6 @@
 {
   "name": "dsh-har-triage",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Offline HAR diagnostics with minimal evidence for DeepSeek Harness",
   "type": "module",
   "license": "MIT",
@@ -11,7 +11,7 @@
   "main": "./src/plugin.js",
   "exports": { ".": "./src/plugin.js", "./core": "./src/analyze.js", "./report": "./src/report.js" },
   "bin": { "har-triage": "./src/cli.js" },
-  "files": ["src/", "cordis.patch.yml", "docs/report-demo.jpg", "README.md", "SECURITY.md", "LICENSE"],
+  "files": ["src/", "cordis.patch.yml", "docs/report-demo.jpg", "README.md", "CHANGELOG.md", "SECURITY.md", "LICENSE"],
   "keywords": ["dsh-plugin", "har", "devtools", "diagnostics", "privacy", "network"],
   "dsh": { "bundle": { "patch": "./cordis.patch.yml" } },
   "scripts": {
@@ -21,10 +21,10 @@
     "smoke:profile": "node scripts/profile-smoke.js"
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "~4.0.4",
-    "@deepseek-ai/dsh-tools": "0.2.0-rc.2 || 0.2.1-alpha.2 || 0.2.1-rc.2 || 0.2.1-rc.3",
-    "@deepseek-ai/dsh-fs": "0.2.0-rc.2 || 0.2.1-alpha.2 || 0.2.1-rc.2 || 0.2.1-rc.3",
-    "@deepseek-ai/dsh-sandbox-policy": "0.2.0-rc.2 || 0.2.1-alpha.2 || 0.2.1-rc.2 || 0.2.1-rc.3"
+    "@deepseek-ai/cordis": "~4.0.4 || 4.0.6-alpha.1",
+    "@deepseek-ai/dsh-tools": "0.2.0-rc.2 || 0.2.1-alpha.2 || 0.2.1-rc.2 || 0.2.1-rc.3 || 0.2.1-rc.4 || 0.2.2-alpha.2",
+    "@deepseek-ai/dsh-fs": "0.2.0-rc.2 || 0.2.1-alpha.2 || 0.2.1-rc.2 || 0.2.1-rc.3 || 0.2.1-rc.4 || 0.2.2-alpha.2",
+    "@deepseek-ai/dsh-sandbox-policy": "0.2.0-rc.2 || 0.2.1-alpha.2 || 0.2.1-rc.2 || 0.2.1-rc.3 || 0.2.1-rc.4 || 0.2.2-alpha.2"
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "4.0.5",

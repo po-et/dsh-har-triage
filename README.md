@@ -22,11 +22,11 @@ Request #43 corresponds to `log.entries[42]` in your original HAR. Endpoint alia
 Node 24.9+ is required. Install the prebuilt bundle into your chosen profile:
 
 ```sh
-dsh plugin --profile YOUR_PROFILE add https://github.com/po-et/dsh-har-triage/releases/download/v0.1.1/dsh-har-triage-0.1.1.tgz
+dsh plugin --profile YOUR_PROFILE add https://github.com/po-et/dsh-har-triage/releases/download/v0.1.2/dsh-har-triage-0.1.2.tgz
 dsh --profile YOUR_PROFILE --dump-config
 ```
 
-Version 0.1.1 adds compatibility with Harness `0.2.1-rc.2` (npm `latest`) and `0.2.1-rc.3` (npm `next`), verified on October 26, 2026. Older `0.2.0-rc.2` and `0.2.1-alpha.2` peers remain accepted based on the original release's tests; they are not part of the current CI matrix.
+Version 0.1.2 adds explicitly tested compatibility with Harness `0.2.1-rc.4` and `0.2.2-alpha.2`, verified on October 28, 2026, while retaining `0.2.1-rc.2` and `0.2.1-rc.3`. Older `0.2.0-rc.2` and `0.2.1-alpha.2` peers remain accepted based on the original release's tests; they are not part of the current CI matrix.
 
 The configuration should contain the `har-triage` row. A configuration dump alone does not establish runtime compatibility. Start that profile, put your HAR inside its session workspace, and ask:
 
@@ -98,7 +98,7 @@ npm pack --dry-run
 
 The 60 tests cover actual CLI subprocesses, controlled output and failure text, input limits, phases, original-file preservation, and real Cordis tool dispatch/filesystem/sandbox/Loader integration. CI runs them on Node 24 and 26. `smoke:host` uses a real service composition; `smoke:profile` requires pnpm on PATH, packs this checkout, installs its tarball with the specified Harness CLI into a fresh temporary Profile, boots it with `runProfile`, and dispatches `har_triage`. Test files and Profiles are retained under the OS temporary directory for inspection.
 
-The current packed bundle was installed and exercised on Harness `0.2.1-rc.2` and `0.2.1-rc.3`. Source bytes were unchanged; output omitted the synthetic canary; overwrite and workspace-escape attempts were refused. HMR is disabled only in the temporary Profiles. CI and the release workflow repeat these checks on both versions. No LLM or real credentials are used. These synthetic checks establish the tested runtime behavior; they are not evidence of real-user usefulness.
+The packed bundle was installed and exercised on Harness `0.2.1-rc.4` and `0.2.2-alpha.2`, in addition to the prior rc.2/rc.3 acceptance. The alpha host uses its new batch tool-execution API; the plugin itself is unchanged. Source bytes were unchanged; output omitted the synthetic canary; overwrite and workspace-escape attempts were refused. HMR is disabled only in the temporary Profiles. CI and the release workflow repeat these checks on all four versions. No LLM or real credentials are used. These synthetic checks establish the tested runtime behavior; they are not evidence of real-user usefulness.
 
 Browser checks covered status filtering, signal-to-request navigation, correct source locators, no console errors, and a 390-pixel layout without page-level overflow. The demo and regression captures are synthetic; real-user usefulness is not yet validated.
 
